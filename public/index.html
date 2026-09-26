@@ -80,9 +80,29 @@
     <p class="klein" id="teilen-hinweis"></p>
     <div class="knoepfe">
       <a id="teilen-wa" class="knopf" target="_blank" rel="noopener">WhatsApp</a>
-      <a id="teilen-mail" class="knopf">E-Mail</a>
+      <button id="teilen-mail">E-Mail</button>
       <button id="teilen-kopie">Kopieren</button>
       <button id="teilen-system">Teilen …</button>
+    </div>
+    <p class="klein" id="mail-gemerkt" hidden>E-Mail geht über <b id="mail-gemerkt-name"></b>. <button id="mail-aendern" class="leise">ändern</button></p>
+    <!-- chosen once per browser: some computers open the wrong program for mailto: -->
+    <div id="mail-wahl" class="mail-wahl" hidden>
+      <p><b>Womit schreibst du E-Mails?</b></p>
+      <p class="klein">Dieser Browser merkt sich deine Wahl. Ändern geht jederzeit.</p>
+      <label class="wahl"><input type="radio" name="mailweg" value="geraet"> E-Mail-Programm dieses Geräts</label>
+      <label class="wahl"><input type="radio" name="mailweg" value="gmail"> Gmail im Browser</label>
+      <label class="wahl"><input type="radio" name="mailweg" value="outlook"> Outlook.com im Browser</label>
+      <label class="wahl"><input type="radio" name="mailweg" value="eigen"> Anderer Anbieter (GMX, web.de …)</label>
+      <div id="mail-eigen-teil" hidden>
+        <label>Adresse, unter der du deine Mails liest
+          <input id="mail-eigen" type="url" inputmode="url" autocomplete="off" placeholder="z. B. https://www.gmx.net">
+        </label>
+        <p class="klein">Beim Senden wird der Text kopiert und diese Seite geöffnet. Dort eine neue Mail anlegen und den Text einfügen.</p>
+      </div>
+      <div class="knoepfe">
+        <button id="mail-ok">Übernehmen und E-Mail schreiben</button>
+        <button id="mail-abbrechen" class="leise">Abbrechen</button>
+      </div>
     </div>
     <button id="teilen-zu" class="leise">Schließen</button>
   </section>

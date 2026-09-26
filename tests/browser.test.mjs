@@ -91,3 +91,82 @@ test("im Browser: hochladen, Code teilen, abholen, verbraucht, abgeben", { skip:
   assert.deepEqual(echt, [], "Fehler in der Konsole (CSP?)");
   assert.equal(fehler.length - echt.length, 1, "genau eine verweigerte Abholung erwartet");
 });
+
+// Klaus 2026-09-26: on an old Windows the mailto: link opened Edge. The user
+// picks the way once; the browser remembers it; a stranger's URL scheme
+// (javascript:, data:) is never accepted.
+test("im Browser: E-Mail-Weg wird einmal gewählt und gemerkt", { skip: !chromium && "playwright-core fehlt — ungeprüft, nicht grün" }, async (t) => {
+  const daten = fs.mkdtempSync(path.join(os.tmpdir(), "datei-post-m-"));
+  await hauptcodeSetzen(daten, HAUPT);
+  const server = starten(einstellungen({ DATEN: daten }));
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  const basis = `http://127.0.0.1:${server.address().port}/`;
+  const browser = await chromium.launch();
+  t.after(async () => { await browser.close(); server.close(); fs.rmSync(daten, { recursive: true, force: true }); });
+
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 800 } });
+  await ctx.grantPermissions(["clipboard-read", "clipboard-write"], { origin: basis.replace(/\/$/, "") });
+  const draussen = [];
+  await ctx.route(/^https:\/\/(mail\.google\.com|outlook\.live\.com|www\.gmx\.net)\//, (r) => { draussen.push(r.request().url()); r.fulfill({ body: "ok" }); });
+  const p = await ctx.newPage();
+  const fehler = [];
+  p.on("pageerror", (e) => fehler.push(String(e)));
+  await p.goto(basis);
+  await p.click("summary");
+  await p.fill("#hauptcode", HAUPT);
+  await p.click("#anmelden button");
+  await p.waitForSelector("#haupt:not([hidden])", { timeout: 30000 });
+  await p.setInputFiles("#haupt-datei", { name: "a.txt", mimeType: "text/plain", buffer: Buffer.from("hallo") });
+  await p.click("#haupt-hochladen button");
+  await p.waitForSelector("#teilen:not([hidden])", { timeout: 30000 });
+  const code = (await p.textContent("#teilen-code")).trim();
+  const sichtbar = (s) => p.evaluate((s) => { const e = document.querySelector(s); return !!e && e.checkVisibility(); }, s);
+
+  // first click: nothing remembered, so it ASKS instead of opening anything
+  assert.equal(await sichtbar("#mail-gemerkt"), false, "ohne Wahl darf nichts als gemerkt dastehen");
+  await p.click("#teilen-mail");
+  assert.equal(await sichtbar("#mail-wahl"), true, "erster Klick fragt nicht nach dem Weg");
+  assert.deepEqual(draussen, [], "erster Klick öffnet schon etwas");
+
+  // choose Gmail: a compose window with the code opens
+  await p.check('input[name="mailweg"][value="gmail"]');
+  const [gm] = await Promise.all([ctx.waitForEvent("page"), p.click("#mail-ok")]);
+  await gm.waitForLoadState();
+  const gurl = decodeURIComponent(gm.url());
+  assert.ok(gurl.startsWith("https://mail.google.com/mail/?view=cm"), "Gmail-Adresse falsch: " + gm.url());
+  assert.ok(gurl.includes("#abholen=" + code), "Gmail-Text trägt den Link mit Code nicht");
+  await gm.close();
+  assert.equal(await sichtbar("#mail-wahl"), false, "Auswahl bleibt nach dem Senden offen");
+  assert.match(await p.textContent("#mail-gemerkt"), /Gmail/, "gemerkter Weg wird nicht genannt");
+  assert.deepEqual(JSON.parse(await p.evaluate(() => localStorage.getItem("dateipost_mailweg_v1"))), { weg: "gmail" });
+
+  // second click: no question, straight to Gmail
+  const [gm2] = await Promise.all([ctx.waitForEvent("page"), p.click("#teilen-mail")]);
+  assert.ok(gm2.url().startsWith("https://mail.google.com/"), "zweiter Klick geht nicht direkt zum gemerkten Weg");
+  assert.equal(await sichtbar("#mail-wahl"), false, "zweiter Klick fragt wieder");
+  await gm2.close();
+
+  // change: a javascript: address is refused and the old choice stays
+  await p.click("#mail-aendern");
+  await p.check('input[name="mailweg"][value="eigen"]');
+  assert.equal(await sichtbar("#mail-eigen"), true, "Adressfeld erscheint nicht");
+  await p.fill("#mail-eigen", "javascript:alert(1)");
+  await p.click("#mail-ok");
+  await p.waitForFunction(() => /keine Internet-Adresse/.test(document.querySelector("#meldung").textContent));
+  assert.deepEqual(JSON.parse(await p.evaluate(() => localStorage.getItem("dateipost_mailweg_v1"))), { weg: "gmail" }, "javascript:-Adresse wurde gespeichert");
+
+  // own provider without scheme: https:// in front, text on the clipboard, page opens
+  await p.fill("#mail-eigen", "www.gmx.net");
+  const [gx] = await Promise.all([ctx.waitForEvent("page"), p.click("#mail-ok")]);
+  assert.equal(gx.url(), "https://www.gmx.net/");
+  await gx.close();
+  await p.waitForFunction(() => /Text ist kopiert/.test(document.querySelector("#meldung").textContent));
+  assert.ok((await p.evaluate(() => navigator.clipboard.readText())).includes("#abholen=" + code), "Zwischenablage trägt den Text nicht");
+  assert.match(await p.textContent("#mail-gemerkt"), /www\.gmx\.net/);
+
+  // a garbage value in storage is not trusted: it asks again
+  await p.evaluate(() => localStorage.setItem("dateipost_mailweg_v1", JSON.stringify({ weg: "eigen", adresse: "javascript:alert(1)" })));
+  await p.click("#teilen-mail");
+  assert.equal(await sichtbar("#mail-wahl"), true, "ein unsauberer gespeicherter Weg wird benutzt statt neu zu fragen");
+  assert.deepEqual(fehler, []);
+});

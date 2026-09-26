@@ -42,6 +42,17 @@ const FAELLE = [
     '$("#teilen-wa").href = "https://wa.me/?text=" + encodeURIComponent(text);', '$("#teilen-wa").href = "https://wa.me/";', "im Browser"],
   ["die Seite setzt Namen als HTML", "public/app.js",
     "for (const k of kinder) e.append(k);", "for (const k of kinder) e.insertAdjacentHTML(\"beforeend\", String(k));", "im Browser"],
+  // e-mail route (Klaus 2026-09-26): asked once, remembered, only http(s)
+  ["eine eigene E-Mail-Adresse darf jedes Schema tragen (javascript:)", "public/app.js",
+    'return (u.protocol === "https:" || u.protocol === "http:") && u.hostname.includes(".") ? u.href : null;', "return u.href;", "E-Mail-Weg"],
+  ["der erste Klick auf E-Mail fragt nicht, sondern öffnet mailto", "public/app.js",
+    "if (w) mailSenden(w); else mailWahlOeffnen();", 'mailSenden(w || { weg: "geraet" });', "E-Mail-Weg"],
+  ["der gewählte E-Mail-Weg wird nicht gemerkt", "public/app.js",
+    "try { localStorage.setItem(MAILWEG_SCHLUESSEL, JSON.stringify(w)); } catch { /* still send once */ }", ";", "E-Mail-Weg"],
+  ["die Mail an Gmail trägt den Text mit dem Code nicht", "public/app.js",
+    'const url = MAILWEGE[w.weg].adresse("Datei-Post", teilenText);', 'const url = MAILWEGE[w.weg].adresse("Datei-Post", "");', "E-Mail-Weg"],
+  ["ein unsauberer gespeicherter E-Mail-Weg wird geglaubt", "public/app.js",
+    '(w.weg !== "eigen" || eigeneAdresse(w.adresse) === w.adresse)', "true", "E-Mail-Weg"],
 ];
 
 let tot = 0;
