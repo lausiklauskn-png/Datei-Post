@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b1118">
+<meta name="robots" content="noindex, nofollow">
+<title>Datei-Post</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="kopf">
+  <h1><img src="icon.svg" alt="" width="28" height="28"> Datei-Post</h1>
+  <p class="unter">Dateien mit einem Einmal-Code weitergeben. Verschlüsselt auf deinem Gerät, bevor sie den Server erreichen.</p>
+</header>
+
+<main>
+  <!-- Start: two ways in, and the master login below -->
+  <section id="start" class="karte">
+    <div class="wahl">
+      <button id="zu-abholen" class="gross">📥 Datei abholen</button>
+      <button id="zu-hochladen" class="gross">📤 Datei abgeben</button>
+    </div>
+    <p class="klein">Du hast einen Code bekommen? Mit <b>abholen</b> lädst du eine Datei herunter, mit <b>abgeben</b> legst du eine Datei für den Absender ab.</p>
+    <details class="haupt-zugang">
+      <summary>🔑 Mit Hauptcode anmelden</summary>
+      <form id="anmelden" autocomplete="off">
+        <label>Hauptcode <input id="hauptcode" type="password" autocomplete="current-password" required></label>
+        <button type="submit">Anmelden</button>
+      </form>
+    </details>
+  </section>
+
+  <section id="abholen" class="karte" hidden>
+    <h2>📥 Datei abholen</h2>
+    <form id="abholen-form" autocomplete="off">
+      <label>Code <input id="abholen-code" class="code" inputmode="text" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX" required></label>
+      <button type="submit">Code prüfen</button>
+    </form>
+    <div id="abholen-datei" hidden>
+      <p class="datei-name" id="abholen-name"></p>
+      <button id="abholen-los" class="gross">⬇ Herunterladen</button>
+    </div>
+    <button class="zurueck">← zurück</button>
+  </section>
+
+  <section id="hochladen" class="karte" hidden>
+    <h2>📤 Datei abgeben</h2>
+    <form id="hochladen-form" autocomplete="off">
+      <label>Code zum Abgeben <input id="hochladen-code" class="code" inputmode="text" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX" required></label>
+      <label>Datei <input id="hochladen-datei" type="file" required></label>
+      <button type="submit" class="gross">Abgeben</button>
+    </form>
+    <button class="zurueck">← zurück</button>
+  </section>
+
+  <section id="haupt" class="karte" hidden>
+    <div class="zeile">
+      <h2>🔑 Meine Dateien</h2>
+      <button id="abmelden" class="leise">Abmelden</button>
+    </div>
+    <div id="platz" class="platz"><div class="balken"><span></span></div><p></p></div>
+    <form id="haupt-hochladen" autocomplete="off">
+      <label>Neue Datei hochladen <input id="haupt-datei" type="file" required></label>
+      <button type="submit" class="gross">📤 Hochladen und Code erzeugen</button>
+    </form>
+    <button id="upload-code-neu">📨 Code zum Abgeben erzeugen</button>
+    <p class="klein">Damit kann eine Person <b>eine</b> Datei für dich ablegen. Sie erscheint danach hier in der Liste.</p>
+    <ul id="liste" class="liste"></ul>
+    <h3 class="klein-kopf">Offene Codes zum Abgeben</h3>
+    <ul id="upload-liste" class="liste"></ul>
+  </section>
+
+  <!-- share panel: shown after a code was created -->
+  <section id="teilen" class="karte hervor" hidden>
+    <h2 id="teilen-titel">Code</h2>
+    <p class="code-gross" id="teilen-code"></p>
+    <p class="klein" id="teilen-hinweis"></p>
+    <div class="knoepfe">
+      <a id="teilen-wa" class="knopf" target="_blank" rel="noopener">WhatsApp</a>
+      <a id="teilen-mail" class="knopf">E-Mail</a>
+      <button id="teilen-kopie">Kopieren</button>
+      <button id="teilen-system">Teilen …</button>
+    </div>
+    <button id="teilen-zu" class="leise">Schließen</button>
+  </section>
+
+  <div id="fortschritt" class="karte" hidden>
+    <p id="fortschritt-text"></p>
+    <progress id="fortschritt-balken" max="1" value="0"></progress>
+  </div>
+  <p id="meldung" class="meldung" role="status" aria-live="polite"></p>
+</main>
+
+<footer class="fuss">
+  <p>Der Server sieht nur verschlüsselte Daten. Namen, Inhalte und Codes kennt nur, wer den Code hat.</p>
+</footer>
+<script type="module" src="app.js"></script>
+</body>
+</html>

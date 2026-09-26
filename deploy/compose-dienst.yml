@@ -1,0 +1,14 @@
+  datei-post:
+    image: node:22-alpine
+    container_name: datei-post
+    restart: unless-stopped
+    working_dir: /app
+    command: ["node", "server.mjs"]
+    environment:
+      - DATEN=/data
+      - PORT=8080
+    volumes:
+      - /srv/datei-post:/app:ro
+      - /srv/datei-post-daten:/data
+    logging: { driver: "json-file", options: { max-size: "1m", max-file: "2" } }
+    expose: ["8080"]

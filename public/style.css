@@ -1,0 +1,44 @@
+:root{--grund:#0b1118;--karte:#121c26;--rand:#243444;--text:#e6edf3;--leise:#9fb0c0;--akzent:#5eead4;--warn:#fbbf24;--rot:#f87171}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--grund);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.kopf,main,.fuss{max-width:640px;margin:0 auto;padding:0 16px}
+.kopf h1{display:flex;align-items:center;gap:10px;margin:20px 0 4px;font-size:1.5rem}
+.unter,.klein,.fuss p{color:var(--leise);font-size:.9rem}
+.karte{background:var(--karte);border:1px solid var(--rand);border-radius:14px;padding:16px;margin:16px 0}
+.hervor{border-color:var(--akzent)}
+h2{margin:0 0 12px;font-size:1.2rem}
+.klein-kopf{font-size:.95rem;color:var(--leise);margin:18px 0 6px}
+.wahl{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:420px){.wahl{grid-template-columns:1fr}}
+button,.knopf{font:inherit;color:var(--text);background:#1b2a38;border:1px solid var(--rand);border-radius:10px;padding:10px 14px;cursor:pointer;text-decoration:none;display:inline-block;min-height:44px}
+button:hover,.knopf:hover{border-color:var(--akzent)}
+button.gross{width:100%;padding:14px;font-size:1.05rem;background:#123433;border-color:#1f5e59}
+button.leise{background:none}
+button:disabled{opacity:.5;cursor:default}
+label{display:block;margin:0 0 12px;color:var(--leise);font-size:.9rem}
+input{display:block;width:100%;margin-top:4px;font:inherit;color:var(--text);background:#0e1720;border:1px solid var(--rand);border-radius:10px;padding:10px}
+input.code{font-family:ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;font-size:1.15rem}
+.zurueck{margin-top:12px;background:none}
+.haupt-zugang{margin-top:16px}
+.haupt-zugang summary{cursor:pointer;color:var(--leise);min-height:44px;padding:10px 0}
+.zeile{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.code-gross{font:600 1.6rem/1.3 ui-monospace,monospace;letter-spacing:.12em;text-align:center;margin:8px 0;color:var(--akzent);word-break:break-all}
+.knoepfe{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.datei-name{font-weight:600;word-break:break-word}
+.platz .balken{height:10px;background:#0e1720;border-radius:6px;overflow:hidden;border:1px solid var(--rand)}
+.platz .balken span{display:block;height:100%;background:var(--akzent);width:0}
+.platz.warn .balken span{background:var(--warn)}
+.platz.voll .balken span{background:var(--rot)}
+.platz p{margin:4px 0 12px;font-size:.85rem;color:var(--leise)}
+.liste{list-style:none;padding:0;margin:12px 0 0}
+.liste li{border-top:1px solid var(--rand);padding:10px 0}
+.liste .name{font-weight:600;word-break:break-word}
+.liste .info{font-size:.85rem;color:var(--leise)}
+.liste .codes{margin:6px 0 0;padding-left:14px;font-size:.88rem}
+.liste .aktionen{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.liste .aktionen button{min-height:38px;padding:6px 10px;font-size:.9rem}
+progress{width:100%;height:14px}
+.meldung{min-height:1.5em;margin:8px 0}
+.meldung.fehler{color:var(--rot)}
+.meldung.gut{color:var(--akzent)}

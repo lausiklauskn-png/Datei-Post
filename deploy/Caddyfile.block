@@ -1,0 +1,8 @@
+
+# Datei-Post — Einmal-Codes, verschlüsselt im Browser (Repo Datei-Post)
+dateien.family-projekt.de {
+	request_body {
+		max_size 16MB
+	}
+	reverse_proxy datei-post:8080
+}
