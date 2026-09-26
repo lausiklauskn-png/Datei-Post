@@ -6,7 +6,11 @@ am Server an (`167.233.204.72`). Nichts davon gehört ins Webhosting.
 ## 0 · Voraussetzungen
 
 - DNS: Eintrag **A · `dateien` · `167.233.204.72`** beim Anbieter von
-  `family-projekt.de`. Prüfen: `getent hosts dateien.family-projekt.de`
+  `family-projekt.de` (INWX).
+  Prüfen **über den Server** — Termux kennt `getent` nicht (gemessen 2026-09-26):
+  `ssh root@167.233.204.72 'getent hosts dateien.family-projekt.de'`
+  Zeigt er noch die alte Nummer (Zwischenspeicher bis 1 h), fragt man INWX direkt:
+  `ssh root@167.233.204.72 'resolvectl flush-caches; dig +short dateien.family-projekt.de @ns.inwx.de'`
 - Der Server muss das Repo holen können (öffentlich, oder mit Deploy-Schlüssel).
 
 ## 1 · Holen und einrichten

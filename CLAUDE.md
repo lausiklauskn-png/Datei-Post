@@ -8,7 +8,7 @@ Läuft als Container `datei-post` hinter Caddy (`dateien.family-projekt.de`).
 
 ```bash
 npm install --no-save playwright-core && npm test
-node tests/gegenprobe.mjs      # 16 Fälle, jeder muss rot werden — mit dem richtigen Namen
+node tests/gegenprobe.mjs      # 21 Fälle, jeder muss rot werden — mit dem richtigen Namen
 ```
 
 ## Was hier leicht kaputtgeht
@@ -27,6 +27,19 @@ node tests/gegenprobe.mjs      # 16 Fälle, jeder muss rot werden — mit dem ri
   der Container sieht die Datei über ihren Inode.
 - Headless-Chromium nennt jeden Download mit Nicht-ASCII-Namen „download" — die
   Probe liest den Namen aus `window.__dateiPost.letzterDownload`.
+
+- **Der E-Mail-Weg wird je Browser gewählt** (`dateipost_mailweg_v1`, Klaus
+  2026-09-26: auf einem alten Windows öffnete `mailto:` Edge). Eigene Adressen
+  nur `http(s)`; ein unsauberer gespeicherter Wert wird nicht geglaubt.
+- **playwright-core muss zum installierten Chromium passen.** Mit 1.63 suchte es
+  eine Fassung, die im Behälter fehlt, und die Browser-Probe **hing**, statt rot
+  zu werden. Hier: `npm install --no-save playwright-core@1.56.1`.
+
+## Stand auf dem Server (2026-09-26)
+
+Eingerichtet und live: DNS `dateien` → `167.233.204.72` (INWX), Container
+`datei-post`, Caddy-Block, Auto-Update alle 5 min, Hauptcode gesetzt. Klaus hat
+Hochladen am Tablet und Abholen an einem Windows-Rechner bestätigt.
 
 ## Netzweit
 
