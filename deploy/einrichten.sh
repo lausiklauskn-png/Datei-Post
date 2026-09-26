@@ -23,6 +23,12 @@ else
   echo "== Dienst datei-post steht schon in docker-compose.yml"
 fi
 docker compose config -q || { cp "docker-compose.yml.bak-dateipost-$STEMPEL" docker-compose.yml; echo "!! compose-Datei ungültig, zurückgelegt"; exit 1; }
+# the awk insert silently does nothing if there is no top-level "volumes:" line — check the result, not the intent
+if ! docker compose config --services | grep -qx datei-post; then
+  cp "docker-compose.yml.bak-dateipost-$STEMPEL" docker-compose.yml
+  echo "!! Dienst datei-post ist nach dem Eintragen NICHT in der compose-Datei — zurückgelegt. Bitte Ausgabe von: grep -n '^[a-z]' docker-compose.yml"
+  exit 1
+fi
 
 docker compose up -d datei-post
 echo "== Container datei-post läuft"
