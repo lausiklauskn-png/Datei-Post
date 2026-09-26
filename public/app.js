@@ -104,7 +104,9 @@ function teilenZeigen(code, art) {
     ? "Gilt für einen vollständigen Download. Du findest den Code später auch in deiner Liste."
     : "Die Person kann damit genau eine Datei für dich ablegen.";
   $("#teilen-wa").href = "https://wa.me/?text=" + encodeURIComponent(text);
-  $("#teilen-mail").href = "mailto:?subject=" + encodeURIComponent("Datei-Post") + "&body=" + encodeURIComponent(text);
+  teilenText = text;
+  $("#mail-wahl").hidden = true;
+  mailGemerktZeigen();
   $("#teilen-kopie").onclick = async () => {
     try { await navigator.clipboard.writeText(text); melden("In die Zwischenablage kopiert.", "gut"); }
     catch { melden("Kopieren ging nicht. Bitte den Code oben abschreiben.", "fehler"); }
@@ -115,6 +117,84 @@ function teilenZeigen(code, art) {
   $("#teilen").scrollIntoView({ behavior: "smooth", block: "center" });
 }
 $("#teilen-zu").onclick = () => { $("#teilen").hidden = true; };
+
+// ── e-mail: which program, remembered per browser ──────────────────
+// A mailto: link opens whatever the DEVICE has registered — on an old
+// Windows that is often Edge, not the mail program. So the user picks
+// once; the choice lives in this browser only (github.io-style shared
+// origins are not an issue here, but the key is app-specific anyway).
+let teilenText = "";
+const MAILWEG_SCHLUESSEL = "dateipost_mailweg_v1";
+const enc = encodeURIComponent;
+const MAILWEGE = {
+  geraet: { name: "das E-Mail-Programm dieses Geräts", adresse: (b, t) => `mailto:?subject=${enc(b)}&body=${enc(t)}` },
+  gmail: { name: "Gmail", adresse: (b, t) => `https://mail.google.com/mail/?view=cm&fs=1&su=${enc(b)}&body=${enc(t)}` },
+  outlook: { name: "Outlook.com", adresse: (b, t) => `https://outlook.live.com/mail/0/deeplink/compose?subject=${enc(b)}&body=${enc(t)}` },
+  eigen: { name: null, adresse: null },
+};
+// Only http(s) — never javascript:, data: or anything else. A missing scheme
+// ("www.gmx.net") gets https:// in front.
+function eigeneAdresse(roh) {
+  let s = String(roh || "").trim();
+  if (!s) return null;
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(s)) s = "https://" + s;
+  try { const u = new URL(s); return (u.protocol === "https:" || u.protocol === "http:") && u.hostname.includes(".") ? u.href : null; }
+  catch { return null; }
+}
+function mailwegLesen() {
+  try {
+    const w = JSON.parse(localStorage.getItem(MAILWEG_SCHLUESSEL) || "null");
+    if (w && MAILWEGE[w.weg] && (w.weg !== "eigen" || eigeneAdresse(w.adresse) === w.adresse)) return w;
+  } catch { /* storage blocked or garbage: ask again */ }
+  return null;
+}
+function mailGemerktZeigen() {
+  const w = mailwegLesen();
+  $("#mail-gemerkt").hidden = !w;
+  if (w) $("#mail-gemerkt-name").textContent = w.weg === "eigen" ? new URL(w.adresse).hostname : MAILWEGE[w.weg].name;
+}
+function mailSenden(w) {
+  if (w.weg === "eigen") {
+    // start the copy while this page still has focus, THEN open the tab
+    let kopiert;
+    try { kopiert = navigator.clipboard.writeText(teilenText); } catch (e) { kopiert = Promise.reject(e); }
+    window.__dateiPost.letzteMail = w.adresse;
+    window.open(w.adresse, "_blank", "noopener");
+    kopiert.then(() => melden("Der Text ist kopiert. In der neuen Mail einfügen.", "gut"),
+      () => melden("Kopieren ging nicht. Bitte zuerst „Kopieren“ drücken, dann einfügen.", "fehler"));
+    return;
+  }
+  const url = MAILWEGE[w.weg].adresse("Datei-Post", teilenText);
+  window.__dateiPost.letzteMail = url;
+  if (w.weg === "geraet") location.href = url;
+  else window.open(url, "_blank", "noopener");
+}
+function mailWahlOeffnen() {
+  const w = mailwegLesen();
+  for (const r of document.querySelectorAll('input[name="mailweg"]')) r.checked = !!w && r.value === w.weg;
+  $("#mail-eigen").value = w && w.weg === "eigen" ? w.adresse : "";
+  $("#mail-eigen-teil").hidden = !(w && w.weg === "eigen");
+  $("#mail-wahl").hidden = false;
+}
+for (const r of document.querySelectorAll('input[name="mailweg"]')) {
+  r.addEventListener("change", () => { $("#mail-eigen-teil").hidden = r.value !== "eigen" || !r.checked; });
+}
+$("#teilen-mail").onclick = () => { const w = mailwegLesen(); if (w) mailSenden(w); else mailWahlOeffnen(); };
+$("#mail-aendern").onclick = mailWahlOeffnen;
+$("#mail-abbrechen").onclick = () => { $("#mail-wahl").hidden = true; };
+$("#mail-ok").onclick = () => {
+  const gewaehlt = document.querySelector('input[name="mailweg"]:checked');
+  if (!gewaehlt) return melden("Bitte eine Möglichkeit wählen.", "fehler");
+  const w = { weg: gewaehlt.value };
+  if (w.weg === "eigen") {
+    w.adresse = eigeneAdresse($("#mail-eigen").value);
+    if (!w.adresse) return melden("Das ist keine Internet-Adresse. Beispiel: https://www.gmx.net", "fehler");
+  }
+  try { localStorage.setItem(MAILWEG_SCHLUESSEL, JSON.stringify(w)); } catch { /* still send once */ }
+  $("#mail-wahl").hidden = true;
+  mailGemerktZeigen();
+  mailSenden(w);
+};
 
 // ── pick up ────────────────────────────────────────────────────────
 let abholung = null;
