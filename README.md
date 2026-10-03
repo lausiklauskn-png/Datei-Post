@@ -47,12 +47,33 @@ Server geschickt.
 - Platz: ab 80 % belegt warnt die Seite, ab 95 % nimmt sie nichts mehr an — die
   Webseite und das Relais liegen auf derselben Platte.
 
+## Große Videos für Kim-sync
+
+Kim-sync (der Mini-Messenger) schickt Videos über 20 MB nicht über die Relais,
+sondern legt sie hier ab — verschlüsselt im Browser, wie jede andere Datei.
+
+1. Mit dem Hauptcode anmelden, **„🎞 Zugang für Kim-sync erzeugen"** drücken.
+2. Den Code in Kim-sync unter Einstellungen → „Große Videos" eingeben.
+
+Der Zugangscode ist **wiederverwendbar** (anders als ein Abhol-Code) und kann
+nur Videos ablegen. Kim-sync speichert nur die daraus abgeleitete Kennung, nie
+den Code. Der Server sieht weder Code noch Dateinamen noch Schlüssel.
+
+| Umgebungsvariable | Vorgabe | |
+|---|---|---|
+| `KIMSYNC_HERKUNFT` | `https://lausiklauskn-png.github.io` | die **eine** Herkunft, die per CORS lesen und schreiben darf — nie `*` |
+| `KIMSYNC_TAGE` | `14` | danach antwortet ein Video mit 410 und wird beim Aufräumen gelöscht |
+| `KIMSYNC_MAX_MB` | `1024` | Größengrenze je Video (zusätzlich zur allgemeinen) |
+
+Widerruft man den Zugang, gehen seine Videos mit. Kim-sync-Videos stehen nicht
+in der normalen Dateiliste.
+
 ## Prüfen
 
 ```bash
 npm install --no-save playwright-core   # einmalig, für die Browser-Probe
 npm test                                 # Krypto · Server · echter Browser
-node tests/gegenprobe.mjs                # baut 16 Fehler ein, jeder MUSS auffallen
+node tests/gegenprobe.mjs                # baut 33 Fehler ein, jeder MUSS auffallen
 NUR_ANKER=1 node tests/gegenprobe.mjs    # nur: trifft jeder Anker genau einmal?
 ```
 

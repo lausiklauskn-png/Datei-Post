@@ -86,6 +86,17 @@ test("im Browser: hochladen, Code teilen, abholen, verbraucht, abgeben", { skip:
   await ich.click("#anmelden button");
   await ich.waitForFunction(() => [...document.querySelectorAll("#liste .name")].some((n) => n.textContent === "Fotos <b>fett</b>.zip"), null, { timeout: 60000 });
 
+  // ── Kim-sync access (2026-10-03): a reusable code, shown with the server,
+  //    listed until it is revoked
+  await ich.click("#kimsync-code-neu");
+  await ich.waitForSelector("#teilen:not([hidden])", { timeout: 60000 });
+  const kcode = (await ich.textContent("#teilen-code")).trim();
+  assert.match(kcode, /^[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$/, "Kim-sync-Zugang ist ein Code");
+  const ktext = decodeURIComponent((await ich.getAttribute("#teilen-wa", "href")).split("text=")[1] || "");
+  assert.ok(ktext.includes(kcode) && ktext.includes("Server: " + basis.replace(/\/$/, "")), "der Text nennt Server und Zugangscode");
+  await ich.click("#teilen-zu");
+  await ich.waitForFunction(() => /Zugang vom/.test(document.querySelector("#kimsync-liste").textContent), null, { timeout: 30000 });
+
   // the refused second pickup (410) is logged by the browser itself — expected
   const echt = fehler.filter((f) => !/status of 410/.test(f));
   assert.deepEqual(echt, [], "Fehler in der Konsole (CSP?)");

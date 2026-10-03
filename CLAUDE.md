@@ -8,7 +8,7 @@ Läuft als Container `datei-post` hinter Caddy (`dateien.family-projekt.de`).
 
 ```bash
 npm install --no-save playwright-core && npm test
-node tests/gegenprobe.mjs      # 21 Fälle, jeder muss rot werden — mit dem richtigen Namen
+node tests/gegenprobe.mjs      # 33 Fälle, jeder muss rot werden — mit dem richtigen Namen
 ```
 
 ## Was hier leicht kaputtgeht
@@ -34,6 +34,15 @@ node tests/gegenprobe.mjs      # 21 Fälle, jeder muss rot werden — mit dem ri
 - **playwright-core muss zum installierten Chromium passen.** Mit 1.63 suchte es
   eine Fassung, die im Behälter fehlt, und die Browser-Probe **hing**, statt rot
   zu werden. Hier: `npm install --no-save playwright-core@1.56.1`.
+
+- **Kim-sync** (2026-10-03, `/api/kimsync/…`, `tests/kimsync.test.mjs`): ein
+  wiederverwendbarer Zugangscode der Art `kimsync` darf **nur** Videos ablegen;
+  CORS nur für `KIMSYNC_HERKUNFT`, **nie `*`**; Ablauf `KIMSYNC_TAGE`, danach 410
+  und Aufräumen; halbfertig → 410; Widerruf nimmt die Videos mit. Der Code
+  steht nie im Text zum Weitergeben und nie auf dem Knopf.
+- **Zwei Riegel decken einander:** eine gewöhnliche Datei hat kein `ablauf`, also
+  gilt sie schon über `ksAbgelaufen` als abgelaufen. Ein Gegenprobe-Fall, der nur
+  die Art-Prüfung wegnahm, war **blind** — Fall 27 nimmt beide zugleich.
 
 ## Stand auf dem Server (2026-09-26)
 
