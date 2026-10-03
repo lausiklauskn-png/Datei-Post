@@ -95,12 +95,16 @@ async function verschluesseltHochladen(datei, { schluesselHaupt, uploadKennung, 
 // ── share panel ────────────────────────────────────────────────────
 function teilenZeigen(code, art) {
   const link = `${location.origin}${location.pathname}#${art}=${code}`;
-  const text = art === "abholen"
+  const text = art === "kimsync"
+    ? `Zugang für große Videos in Kim-sync:\nServer: ${location.origin}\nZugangscode: ${code}\n\nIn Kim-sync unter Einstellungen → „Große Videos" eintragen.`
+    : art === "abholen"
     ? `Hier ist eine Datei für dich:\n${link}\n\nCode: ${code}\nDer Code gilt für ein Mal.`
     : `Hier kannst du mir eine Datei schicken:\n${link}\n\nCode: ${code}\nDer Code gilt für eine Datei.`;
-  $("#teilen-titel").textContent = art === "abholen" ? "Code zum Abholen" : "Code zum Abgeben";
+  $("#teilen-titel").textContent = art === "kimsync" ? "Zugang für Kim-sync" : art === "abholen" ? "Code zum Abholen" : "Code zum Abgeben";
   $("#teilen-code").textContent = code;
-  $("#teilen-hinweis").textContent = art === "abholen"
+  $("#teilen-hinweis").textContent = art === "kimsync"
+    ? `In Kim-sync unter Einstellungen → „Große Videos" eintragen: Server ${location.origin} und diesen Code. Er gilt, bis du ihn zurückziehst.`
+    : art === "abholen"
     ? "Gilt für einen vollständigen Download. Du findest den Code später auch in deiner Liste."
     : "Die Person kann damit genau eine Datei für dich ablegen.";
   $("#teilen-wa").href = "https://wa.me/?text=" + encodeURIComponent(text);
@@ -313,6 +317,17 @@ $("#haupt-hochladen").addEventListener("submit", async (ev) => {
   finally { if (knopf) knopf.disabled = false; }
 });
 
+$("#kimsync-code-neu").addEventListener("click", async () => {
+  try {
+    fortschritt("Zugang wird erzeugt …", 0);
+    const code = K.neuerCode();
+    const { kennung } = await K.ableiten(K.normalisiereCode(code), "kimsync");
+    await api("/api/kimsync-codes", { method: "POST", body: { kennung, codeHaupt: await K.textEinpacken(code, sitzung.schluessel, "code") } });
+    fortschritt(null);
+    teilenZeigen(code, "kimsync");
+    await listeZeichnen();
+  } catch (e) { fortschritt(null); melden(e.message, "fehler"); }
+});
 $("#upload-code-neu").addEventListener("click", async () => {
   try {
     fortschritt("Code wird erzeugt …", 0);
@@ -395,6 +410,21 @@ async function listeZeichnen() {
       } }, "zeigen"), " ",
       el("button", { onclick: async () => {
         if (!confirm("Diesen Code zurückziehen?")) return;
+        try { await api("/api/codes/" + c.id, { method: "DELETE" }); await listeZeichnen(); } catch (e) { melden(e.message, "fehler"); }
+      } }, "zurückziehen")));
+  }
+
+  if (daten.kimsync) $("#ks-tage").textContent = String(daten.kimsync.tage);
+  const ks = $("#kimsync-liste"); ks.replaceChildren();
+  const kz = daten.kimsyncCodes || [];
+  if (!kz.length) ks.append(el("li", { class: "info" }, "Kein Zugang."));
+  for (const c of kz) {
+    ks.append(el("li", {}, `Zugang vom ${datum(c.erstellt)} · ${c.videos} Video(s), ${groesse(c.bytes)} `,
+      el("button", { onclick: async () => {
+        try { teilenZeigen(await K.textAuspacken(c.codeHaupt, sitzung.schluessel, "code"), "kimsync"); } catch (e) { melden(e.message, "fehler"); }
+      } }, "zeigen"), " ",
+      el("button", { onclick: async () => {
+        if (!confirm("Diesen Zugang zurückziehen? Kim-sync kann damit nichts mehr ablegen, und die Videos dieses Zugangs werden gelöscht.")) return;
         try { await api("/api/codes/" + c.id, { method: "DELETE" }); await listeZeichnen(); } catch (e) { melden(e.message, "fehler"); }
       } }, "zurückziehen")));
   }

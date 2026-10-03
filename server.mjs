@@ -28,6 +28,11 @@ export function einstellungen(env = process.env) {
     warnGrenze: Number(env.WARN_GRENZE ?? 0.8),
     fehlerMax: Number(env.FEHLER_MAX || 10),
     sperrMs: Number(env.SPERR_MINUTEN || 15) * 60 * 1000,
+    // Kim-sync (a messenger on another origin) parks big videos here.
+    // Only that origin gets CORS headers, never "*".
+    kimsyncHerkunft: env.KIMSYNC_HERKUNFT || "https://lausiklauskn-png.github.io",
+    kimsyncTage: Number(env.KIMSYNC_TAGE || 14),
+    kimsyncMaxBytes: Number(env.KIMSYNC_MAX_MB || 1024) * 1024 * 1024,
   };
 }
 
@@ -207,6 +212,74 @@ export function starten(cfg = einstellungen()) {
     antwort(res, 200, { ok: true });
   }
 
+  // ── Kim-sync ──────────────────────────────────────────────────────
+  // A reusable access code (art "kimsync") lets the messenger store
+  // encrypted video parts. The server keeps no name, no type, no key:
+  // only size, part count and expiry. The file key travels inside the
+  // encrypted room message, never here.
+  const KS_KOPF = (req) => {
+    const o = req.headers.origin;
+    return o && o === cfg.kimsyncHerkunft ? { "access-control-allow-origin": o, vary: "origin" } : { vary: "origin" };
+  };
+  async function ksAnlegen(req, res, ip) {
+    const kopf = KS_KOPF(req);
+    if (gesperrt(ip)) return antwort(res, 429, { fehler: "gesperrt" }, kopf);
+    const b = await jsonKoerper(req);
+    const c = await codeLesen(b.kennung);
+    if (!c || c.art !== "kimsync" || c.status !== "offen") { fehler(ip); return antwort(res, 403, { fehler: "code" }, kopf); }
+    const groesse = Number(b.groesse);
+    if (!Number.isInteger(groesse) || groesse < 1) return antwort(res, 400, { fehler: "groesse" }, kopf);
+    const max = Math.min(cfg.maxBytes, cfg.kimsyncMaxBytes);
+    if (groesse > max) return antwort(res, 413, { fehler: "zu_gross", max }, kopf);
+    const p = platz(cfg.daten, cfg);
+    if (p.voll || p.frei - groesse < (1 - cfg.platzGrenze) * p.gesamt) return antwort(res, 507, { fehler: "voll" }, kopf);
+    const id = zufall(12);
+    const schreib = zufall(32);
+    const ablauf = new Date(Date.now() + cfg.kimsyncTage * 86400 * 1000).toISOString();
+    await fsp.mkdir(path.join(dateiOrdner(cfg.daten, id), "teile"), { recursive: true });
+    await jsonSchreiben(path.join(dateiOrdner(cfg.daten, id), "meta.json"), {
+      id, art: "kimsync", groesse, teile: teileFuer(groesse), erstellt: new Date().toISOString(), ablauf,
+      fertig: false, kimsyncCode: c.kh.slice(0, 16), schreibHash: sha256(schreib),
+    });
+    antwort(res, 201, { id, teile: teileFuer(groesse), schreibToken: schreib, ablauf }, kopf);
+  }
+  const ksAbgelaufen = (d) => !d.ablauf || Date.parse(d.ablauf) <= Date.now();
+  async function ksDatei(req, res, id, rest) {
+    const kopf = KS_KOPF(req);
+    const d = await dateiLesen(id);
+    if (!d || d.art !== "kimsync") return antwort(res, 410, { fehler: "geloescht" }, kopf);
+    if (req.method === "PUT" || (req.method === "POST" && rest === "/fertig")) {
+      if (ksAbgelaufen(d)) return antwort(res, 410, { fehler: "abgelaufen" }, kopf);
+      for (const [k, v] of Object.entries(kopf)) res.setHeader(k, v);
+      const m = rest.match(/^\/teil\/(\d+)$/);
+      if (req.method === "PUT" && m) return teilSchreiben(req, res, id, Number(m[1]));
+      if (req.method === "POST") return dateiFertig(req, res, id);
+      return antwort(res, 404, { fehler: "weg" }, kopf);
+    }
+    if (req.method !== "GET") return antwort(res, 405, {}, kopf);
+    if (!d.fertig) return antwort(res, 410, { fehler: "unvollstaendig" }, kopf);
+    if (ksAbgelaufen(d)) return antwort(res, 410, { fehler: "abgelaufen" }, kopf);
+    if (!rest) return antwort(res, 200, { id: d.id, groesse: d.groesse, teile: d.teile, ablauf: d.ablauf }, kopf);
+    const m = rest.match(/^\/teil\/(\d+)$/);
+    if (!m || Number(m[1]) >= d.teile) return antwort(res, 404, { fehler: "teil" }, kopf);
+    const p = path.join(dateiOrdner(cfg.daten, d.id), "teile", Number(m[1]) + ".bin");
+    const st = await fsp.stat(p);
+    res.writeHead(200, { "content-type": "application/octet-stream", "content-length": st.size, "cache-control": "no-store", ...kopf });
+    return fs.createReadStream(p).pipe(res);
+  }
+  // Expired Kim-sync files go away; so do uploads that never finished
+  // (a day is plenty for a phone on mobile data).
+  async function aufraeumen(jetzt = Date.now()) {
+    let weg = 0;
+    for (const id of await fsp.readdir(pfade(cfg.daten).dateien).catch(() => [])) {
+      const d = await dateiLesen(id);
+      if (!d || d.art !== "kimsync") continue;
+      const alt = !d.fertig && Date.parse(d.erstellt) + 86400 * 1000 <= jetzt;
+      if (Date.parse(d.ablauf) <= jetzt || alt) { await fsp.rm(dateiOrdner(cfg.daten, id), { recursive: true, force: true }); weg++; }
+    }
+    return weg;
+  }
+
   async function alleCodes() {
     const out = [];
     for (const f of await fsp.readdir(pfade(cfg.daten).codes)) {
@@ -228,14 +301,23 @@ export function starten(cfg = einstellungen()) {
     const dateien = [];
     for (const id of await fsp.readdir(pfade(cfg.daten).dateien)) {
       const d = await dateiLesen(id);
-      if (!d || !d.fertig) continue;
+      if (!d || !d.fertig || d.art === "kimsync") continue;
       dateien.push({ id: d.id, meta: d.meta, groesse: d.groesse, teile: d.teile, erstellt: d.erstellt,
         schluesselHaupt: d.schluesselHaupt, schluesselUpload: d.schluesselUpload, uploadCode: d.uploadCode,
         codes: codes.filter((c) => c.art === "abholen" && c.dateiId === d.id).map(codeAussen) });
     }
     dateien.sort((a, b) => b.erstellt.localeCompare(a.erstellt));
     const uploadCodes = codes.filter((c) => c.art === "hochladen").map(codeAussen);
-    antwort(res, 200, { dateien, uploadCodes, platz: platz(cfg.daten, cfg) });
+    const ks = [];
+    for (const id of await fsp.readdir(pfade(cfg.daten).dateien)) {
+      const d = await dateiLesen(id);
+      if (d && d.art === "kimsync" && d.fertig) ks.push(d);
+    }
+    const kimsyncCodes = codes.filter((c) => c.art === "kimsync").map((c) => {
+      const meine = ks.filter((d) => d.kimsyncCode === c.kh.slice(0, 16));
+      return { ...codeAussen(c), videos: meine.length, bytes: meine.reduce((s, d) => s + d.groesse, 0) };
+    });
+    antwort(res, 200, { dateien, uploadCodes, kimsyncCodes, kimsync: { tage: cfg.kimsyncTage, herkunft: cfg.kimsyncHerkunft }, platz: platz(cfg.daten, cfg) });
   }
 
   async function codeAnlegen(req, res, art, dateiId) {
@@ -320,11 +402,24 @@ export function starten(cfg = einstellungen()) {
         return antwort(res, 200, { ok: true, maxBytes: cfg.maxBytes });
       }
       if ((m = url.match(/^\/api\/abholen\/([0-9a-f]{64})(\/.*)?$/))) return await abholen(req, res, ip, m[1], m[2] || "");
+      if (url.startsWith("/api/kimsync/")) {
+        if (req.method === "OPTIONS") {
+          const kopf = KS_KOPF(req);
+          if (!kopf["access-control-allow-origin"]) { res.writeHead(403, { vary: "origin" }); return res.end(); }
+          res.writeHead(204, { ...kopf, "access-control-allow-methods": "GET, POST, PUT, OPTIONS",
+            "access-control-allow-headers": "content-type, x-schreib-token", "access-control-max-age": "600" });
+          return res.end();
+        }
+        if (url === "/api/kimsync/dateien" && req.method === "POST") return await ksAnlegen(req, res, ip);
+        if ((m = url.match(/^\/api\/kimsync\/dateien\/([0-9a-f]{24})(\/.*)?$/))) return await ksDatei(req, res, m[1], m[2] || "");
+        return antwort(res, 404, { fehler: "weg" }, KS_KOPF(req));
+      }
 
       // everything below: master only
       if (!hauptOk(req)) return antwort(res, 401, { fehler: "anmelden" });
       if (url === "/api/liste" && req.method === "GET") return await liste(res);
       if (url === "/api/upload-codes" && req.method === "POST") return await codeAnlegen(req, res, "hochladen");
+      if (url === "/api/kimsync-codes" && req.method === "POST") return await codeAnlegen(req, res, "kimsync");
       if ((m = url.match(/^\/api\/dateien\/([0-9a-f]{24})\/codes$/)) && req.method === "POST") return await codeAnlegen(req, res, "abholen", m[1]);
       if ((m = url.match(/^\/api\/dateien\/([0-9a-f]{24})\/haupt$/)) && req.method === "POST") {
         const d = await dateiLesen(m[1]); const b = await jsonKoerper(req);
@@ -344,6 +439,12 @@ export function starten(cfg = einstellungen()) {
         const c = await codeNachId(m[1]);
         if (!c) return antwort(res, 404, {});
         await fsp.rm(codeDatei(cfg.daten, c.kh), { force: true });
+        if (c.art === "kimsync") { // its videos go with it
+          for (const id of await fsp.readdir(pfade(cfg.daten).dateien).catch(() => [])) {
+            const d = await dateiLesen(id);
+            if (d && d.art === "kimsync" && d.kimsyncCode === m[1]) await fsp.rm(dateiOrdner(cfg.daten, id), { recursive: true, force: true });
+          }
+        }
         return antwort(res, 200, { ok: true });
       }
       if (url === "/api/abmelden" && req.method === "POST") {
@@ -357,6 +458,10 @@ export function starten(cfg = einstellungen()) {
     }
   });
   server.requestTimeout = 0; // a 100 MB upload over mobile must not be cut off
+  const putzer = setInterval(() => aufraeumen().catch((e) => console.error(e)), 3600 * 1000);
+  putzer.unref();
+  server.on("close", () => clearInterval(putzer));
+  server.aufraeumen = aufraeumen; // for the probe
   return server;
 }
 
