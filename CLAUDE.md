@@ -54,3 +54,9 @@ Hochladen am Tablet und Abholen an einem Windows-Rechner bestätigt.
 
 Freibrief · frisch von `origin/main` · Ton · kein PII · Ehrlichkeit:
 [Sage-Protokol/docs/NETZWEIT.md](https://github.com/lausiklauskn-png/Sage-Protokol/blob/main/docs/NETZWEIT.md)
+
+## 🛡 Geht hier etwas an eine KI? Nein (nachgesehen 2026-10-14, Sitzung 2 von 4)
+
+Gelesen auf `main` (`16b37e4`), nicht vermutet: `public/app.js` ruft `fetch` nur gegen den **eigenen** Server (`/api/…`); `server.mjs` ruft nichts nach draußen. Die einzigen fremden Adressen sind Links, die der **Nutzer** antippt (WhatsApp, Gmail, Outlook, eigener Mail-Dienst) — sie tragen den Text zum Weitergeben, nie die Datei. Kein Modul 04, kein Modul 24, kein KI-Anbieter.
+
+**Deshalb ist hier nichts gebaut** (Brief Sitzung 2: „Wenn nein: nichts bauen, das benennen"). Eine Prüfung der Datei beim Hochladen auf Knopfdruck wäre ein eigener Wunsch von Klaus, kein Befund — nicht ungefragt bauen. Wer hier einen KI-Weg ergänzt, zieht die Regel der übrigen Apps mit: prüfen, einmal anhalten, nie das Original.
