@@ -50,6 +50,17 @@ Eingerichtet und live: DNS `dateien` → `167.233.204.72` (INWX), Container
 `datei-post`, Caddy-Block, Auto-Update alle 5 min, Hauptcode gesetzt. Klaus hat
 Hochladen am Tablet und Abholen an einem Windows-Rechner bestätigt.
 
+## ⬇ Installieren-Knopf (2026-10-18)
+
+Klaus: *„Den Installieren-Button überall fest einbauen … Wenn es kein Einstellungsfeld gibt, dann oben ins Menü."*
+Datei-Post hat keine Einstellungen und keine Knöpfe in der Kopfzeile; der Knopf steht deshalb **hinten in der
+Kopfzeile** (`data-in="header.kopf"`, Klasse `leise`). `public/assets/installieren.js` ist byte-1:1 aus Sage-Protokol
+(SHA-256 `e0644084…c3c3`) — dort pflegen, hier neu kopieren — und steht in der geschlossenen Liste `STATISCH`.
+Als installierte App verschwindet er. Gemessen am echten `server.mjs` (mit seiner CSP): keine Installierbarkeits-Fehler,
+360 px ohne Überlauf, Meldung lesbar. ⚠ **Benannt, nicht gebaut:** Datei-Post hat **keinen Service-Worker** (kein
+Offline-Vorrat); Chrome hält die Seite trotzdem für installierbar. Manifest ohne `id` (eigene Adresse, keine
+Kollision). ⚠ Am Tablet/Handy nicht gemessen.
+
 ## Netzweit
 
 Freibrief · frisch von `origin/main` · Ton · kein PII · Ehrlichkeit:
