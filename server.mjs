@@ -98,7 +98,7 @@ export function platz(daten, cfg) {
 // ── server ──────────────────────────────────────────────────────────
 const TYPEN = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".webmanifest": "application/manifest+json" };
-const STATISCH = new Set(["index.html", "app.js", "krypto.js", "style.css", "icon.svg", "manifest.webmanifest"]);
+const STATISCH = new Set(["index.html", "app.js", "krypto.js", "style.css", "icon.svg", "manifest.webmanifest", "assets/installieren.js"]);
 
 export function starten(cfg = einstellungen()) {
   for (const p of Object.values(pfade(cfg.daten))) fs.mkdirSync(p, { recursive: true });
