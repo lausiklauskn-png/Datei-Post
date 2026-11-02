@@ -97,7 +97,7 @@ if (process.env.NUR_ANKER) { console.log(`${FAELLE.length} Anker · ${tot} tot`)
 
 let kopie = "";
 const lauf = () => {
-  try { execFileSync("node", ["--test", "tests/*.test.mjs"], { cwd: kopie, stdio: "pipe", encoding: "utf8" }); return ""; }
+  try { execFileSync("node", ["--test", "--test-reporter=tap", "tests/*.test.mjs"], { cwd: kopie, stdio: "pipe", encoding: "utf8" }); return ""; }
   catch (e) { return String(e.stdout || ""); }
 };
 let gefangen = 0, blind = 0, falsch = 0;

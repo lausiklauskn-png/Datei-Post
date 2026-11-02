@@ -153,6 +153,7 @@ test("im Browser: E-Mail-Weg wird einmal gewählt und gemerkt", { skip: !chromiu
 
   // second click: no question, straight to Gmail
   const [gm2] = await Promise.all([ctx.waitForEvent("page"), p.click("#teilen-mail")]);
+  await gm2.waitForURL("https://mail.google.com/**");
   assert.ok(gm2.url().startsWith("https://mail.google.com/"), "zweiter Klick geht nicht direkt zum gemerkten Weg");
   assert.equal(await sichtbar("#mail-wahl"), false, "zweiter Klick fragt wieder");
   await gm2.close();
@@ -169,6 +170,7 @@ test("im Browser: E-Mail-Weg wird einmal gewählt und gemerkt", { skip: !chromiu
   // own provider without scheme: https:// in front, text on the clipboard, page opens
   await p.fill("#mail-eigen", "www.gmx.net");
   const [gx] = await Promise.all([ctx.waitForEvent("page"), p.click("#mail-ok")]);
+  await gx.waitForURL("https://www.gmx.net/");
   assert.equal(gx.url(), "https://www.gmx.net/");
   await gx.close();
   await p.waitForFunction(() => /Text ist kopiert/.test(document.querySelector("#meldung").textContent));
